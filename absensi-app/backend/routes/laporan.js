@@ -1,12 +1,54 @@
-const express = require('express');
-const { kirimLaporan, riwayatWalas, semuaLaporan, updateStatus } = require('../controllers/laporanController');
-const { verifyToken } = require('../middleware/auth');
-const roleMiddleware = require('../middleware/role');
+import express from 'express';
+import { verifyToken, checkRole } from '../middleware/auth.js';
+import LaporanKasus from '../models/LaporanKasus.js';
+import User from '../models/User.js';
+
 const router = express.Router();
 
-router.post('/', verifyToken, roleMiddleware(['walas']), kirimLaporan);
-router.get('/riwayat-walas', verifyToken, roleMiddleware(['walas']), riwayatWalas);
-router.get('/semua', verifyToken, roleMiddleware(['petugas', 'admin']), semuaLaporan);
-router.put('/:id/status', verifyToken, roleMiddleware(['petugas', 'admin']), updateStatus);
+router.post('/', verifyToken, checkRole('walas'), async (req, res) => {
+  try {
+    const { siswa_id, judul, deskripsi } = req.body;
+    const laporan = new LaporanKasus({
+      walas_id: req.user.userId, siswa_id, judul, deskripsi,
+      tanggal: new Date().toISOString().split('T')[0]
+    });
+    await laporan.save();
+    res.status(201).json({ message: 'Laporan kasus berhasil dikirim ke petugas' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-module.exports = router;
+router.get('/walas', verifyToken, checkRole('walas'), async (req, res) => {
+  try {
+    const laporan = await LaporanKasus.find({ walas_id: req.user.userId })
+      .populate('siswa_id', 'nama_lengkap').sort({ tanggal: -1 });
+    res.json(laporan);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get('/petugas', verifyToken, checkRole('petugas'), async (req, res) => {
+  try {
+    const laporan = await LaporanKasus.find()
+      .populate('walas_id', 'nama_lengkap')
+      .populate('siswa_id', 'nama_lengkap')
+      .sort({ tanggal: -1 });
+    res.json(laporan);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put('/:id/status', verifyToken, checkRole('petugas'), async (req, res) => {
+  try {
+    const { status } = req.body;
+    await LaporanKasus.findByIdAndUpdate(req.params.id, { status });
+    res.json({ message: 'Status laporan diperbarui' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+export default router;

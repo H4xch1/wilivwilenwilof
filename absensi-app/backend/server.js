@@ -1,52 +1,32 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
-const connectDB = require('./config/db');
-const { verifyToken } = require('./middleware/auth');
-const roleMiddleware = require('./middleware/role');
-const User = require('./models/User');
-const Absensi = require('./models/Absensi');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import connectDB from './config/db.js';
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/user.js';
+import absensiRoutes from './routes/absensi.js';
+import laporanRoutes from './routes/laporan.js';
 
+dotenv.config();
 connectDB();
 
 const app = express();
-
-app.get('/', (req, res) => {
-  res.send('API Absensi SMK Citra Negara Is Running... 🟢');
-});
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/absensi', require('./routes/absensi'));
-app.use('/api/laporan', require('./routes/laporan'));
-app.use('/api/users', require('./routes/user'));
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/absensi', absensiRoutes);
+app.use('/api/laporan', laporanRoutes);
 
-// Statistik untuk admin
-app.get('/api/stats', verifyToken, roleMiddleware(['admin']), async (req, res) => {
-    const totalSiswa = await User.countDocuments({ role: 'murid' });
-    const totalPetugas = await User.countDocuments({ role: 'petugas' });
-    const totalWalas = await User.countDocuments({ role: 'walas' });
-    const totalAdmin = await User.countDocuments({ role: 'admin' });
-    const bulanIni = new Date().toISOString().slice(0, 7);
-    const hadir = await Absensi.countDocuments({ status: 'hadir', tanggal: { $regex: bulanIni } });
-    const sakit = await Absensi.countDocuments({ status: 'sakit', tanggal: { $regex: bulanIni } });
-    const izin = await Absensi.countDocuments({ status: 'izin', tanggal: { $regex: bulanIni } });
-    res.json({ totalSiswa, totalPetugas, totalWalas, totalAdmin, chart: [hadir, sakit, izin] });
-});
+const dirs = ['uploads/absensi', 'uploads/absensi/kamera'];
+dirs.forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
-// Siswa bimbingan untuk wali kelas
-app.get('/api/walas/siswa-bimbingan', verifyToken, roleMiddleware(['walas']), async (req, res) => {
-    const siswa = await User.find({ role: 'murid', wali_kelas_id: req.userId }).select('nama_lengkap nis _id');
-    res.json(siswa);
-});
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
