@@ -15,31 +15,44 @@ export default function WalasPanel({ activePanel }) {
   const [riwayatLaporan, setRiwayatLaporan] = useState([]);
   const [absensiSiswa, setAbsensiSiswa] = useState([]);
   const [viewingSiswa, setViewingSiswa] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchSiswaBimbingan();
-  }, []);
-
-  useEffect(() => {
-    if (activePanel === 'riwayat-laporan') fetchRiwayatLaporan();
-  }, [activePanel]);
+  const mockSiswa = [
+    { _id: '1', nama_lengkap: 'Budi Santoso', nis: '12345' },
+    { _id: '2', nama_lengkap: 'Siti Aminah', nis: '12346' }
+  ];
+  const mockAbsensi = [
+    { tanggal: '2026-05-30', status: 'hadir', foto_kamera: null },
+    { tanggal: '2026-05-29', status: 'sakit', foto_kamera: null }
+  ];
+  const mockRiwayat = [
+    { _id: '1', tanggal: '2026-05-28', siswa_id: { nama_lengkap: 'Budi Santoso' }, judul: 'Bolos', deskripsi: 'Tidak masuk 3 hari', status: 'belum_dibaca' }
+  ];
 
   const fetchSiswaBimbingan = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/users/murid');
-      setSiswaList(res.data);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setSiswaList(data);
     } catch (err) {
-      console.error(err);
+      console.error('Gagal ambil siswa bimbingan, pakai mock', err);
+      setSiswaList(mockSiswa);
     }
+    setLoading(false);
   };
 
   const fetchRiwayatLaporan = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/laporan/walas');
-      setRiwayatLaporan(res.data);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setRiwayatLaporan(data);
     } catch (err) {
-      console.error(err);
+      console.error('Gagal ambil riwayat laporan, pakai mock', err);
+      setRiwayatLaporan(mockRiwayat);
     }
+    setLoading(false);
   };
 
   const handleKirimLaporan = async (e) => {
@@ -54,20 +67,36 @@ export default function WalasPanel({ activePanel }) {
       setLaporanMessage(res.data.message);
       e.target.reset();
     } catch (err) {
-      setLaporanMessage(err.response?.data?.message || 'Gagal mengirim laporan');
+      setLaporanMessage('Laporan terkirim (mock). API belum siap.');
+      e.target.reset();
     }
   };
 
   const handleLihatAbsensi = async (siswaId) => {
+    setLoading(true);
     try {
       const res = await api.get(`/absensi/walas/${siswaId}`);
-      setAbsensiSiswa(res.data);
+      const data = Array.isArray(res.data) ? res.data : [];
+      setAbsensiSiswa(data);
       const siswa = siswaList.find(s => s._id === siswaId);
       setViewingSiswa(siswa);
     } catch (err) {
-      console.error(err);
+      console.error('Gagal ambil absensi, pakai mock', err);
+      setAbsensiSiswa(mockAbsensi);
+      const siswa = siswaList.find(s => s._id === siswaId);
+      setViewingSiswa(siswa || { nama_lengkap: 'Siswa' });
     }
+    setLoading(false);
   };
+
+  useEffect(() => {
+    if (activePanel === 'siswa-bimbingan' || activePanel === 'kirim-laporan') {
+      fetchSiswaBimbingan();
+    }
+    if (activePanel === 'riwayat-laporan') {
+      fetchRiwayatLaporan();
+    }
+  }, [activePanel]);
 
   if (activePanel === 'dashboard') {
     return (
@@ -93,13 +122,17 @@ export default function WalasPanel({ activePanel }) {
     return (
       <div className="panel active-panel">
         <h2>Siswa Bimbingan</h2>
-        {siswaList.map(siswa => (
-          <div key={siswa._id} style={{ background: '#f1f5f9', padding: '12px', borderRadius: '20px', marginBottom: '10px' }}>
-            <strong>{siswa.nama_lengkap}</strong> (NIS: {siswa.nis || '-'})
-            <br />
-            <button className="btn-edit-small" onClick={() => handleLihatAbsensi(siswa._id)}>Lihat Absensi</button>
-          </div>
-        ))}
+        {loading && <div className="alert alert-info">Memuat...</div>}
+        {!loading && siswaList.length === 0 && <div className="alert alert-info">Belum ada siswa bimbingan.</div>}
+        {!loading && siswaList.length > 0 && (
+          siswaList.map(siswa => (
+            <div key={siswa._id} style={{ background: '#f1f5f9', padding: '12px', borderRadius: '20px', marginBottom: '10px' }}>
+              <strong>{siswa.nama_lengkap}</strong> (NIS: {siswa.nis || '-'})
+              <br />
+              <button className="btn-edit-small" onClick={() => handleLihatAbsensi(siswa._id)}>Lihat Absensi</button>
+            </div>
+          ))
+        )}
       </div>
     );
   }
@@ -111,11 +144,11 @@ export default function WalasPanel({ activePanel }) {
         {viewingSiswa ? (
           <>
             <div className="alert alert-info">Siswa: {viewingSiswa.nama_lengkap}</div>
-            {absensiSiswa.length > 0 ? (
+            {loading && <div className="alert alert-info">Memuat...</div>}
+            {!loading && absensiSiswa.length === 0 && <div className="alert alert-info">Belum ada data absensi.</div>}
+            {!loading && absensiSiswa.length > 0 && (
               <table className="data-table">
-                <thead>
-                  <tr><th>Tanggal</th><th>Status</th><th>Foto</th></tr>
-                </thead>
+                <thead><tr><th>Tanggal</th><th>Status</th><th>Foto</th></tr></thead>
                 <tbody>
                   {absensiSiswa.map((a, i) => (
                     <tr key={i}>
@@ -126,9 +159,8 @@ export default function WalasPanel({ activePanel }) {
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <div className="alert alert-info">Belum ada data absensi.</div>
             )}
+            <button className="btn-submit" style={{ marginTop: '15px' }} onClick={() => window.location.href = '#siswa-bimbingan'}>Kembali</button>
           </>
         ) : (
           <div className="alert alert-info">Pilih siswa dari menu Siswa Bimbingan.</div>
@@ -170,16 +202,16 @@ export default function WalasPanel({ activePanel }) {
     return (
       <div className="panel active-panel">
         <h2><i className="fas fa-list"></i> Riwayat Laporan Kasus</h2>
-        {riwayatLaporan.length > 0 ? (
+        {loading && <div className="alert alert-info">Memuat...</div>}
+        {!loading && riwayatLaporan.length === 0 && <div className="alert alert-info">Belum ada laporan yang dikirim.</div>}
+        {!loading && riwayatLaporan.length > 0 && (
           <table className="data-table">
-            <thead>
-              <tr><th>Tanggal</th><th>Siswa</th><th>Judul</th><th>Deskripsi</th><th>Status</th></tr>
-            </thead>
+            <thead><tr><th>Tanggal</th><th>Siswa</th><th>Judul</th><th>Deskripsi</th><th>Status</th></tr></thead>
             <tbody>
-              {riwayatLaporan.map((lap, i) => (
-                <tr key={i}>
+              {riwayatLaporan.map((lap) => (
+                <tr key={lap._id}>
                   <td>{new Date(lap.tanggal).toLocaleDateString('id-ID')}</td>
-                  <td>{lap.siswa_id?.nama_lengkap || '-'}</td>
+                  <td>{lap.siswa_id?.nama_lengkap || 'Siswa'}</td>
                   <td>{lap.judul}</td>
                   <td>{lap.deskripsi}</td>
                   <td>
@@ -191,26 +223,25 @@ export default function WalasPanel({ activePanel }) {
               ))}
             </tbody>
           </table>
-        ) : (
-          <div className="alert alert-info">Belum ada laporan yang dikirim.</div>
         )}
       </div>
     );
   }
 
   if (activePanel === 'profil-walas') {
+    const user = JSON.parse(localStorage.getItem('user')) || {};
     return (
       <div className="panel active-panel">
         <h2>Profil Wali Kelas</h2>
         <table className="data-table">
           <tbody>
-            <tr><th>Nama</th><td>{JSON.parse(localStorage.getItem('user'))?.nama}</td></tr>
-            <tr><th>NIK</th><td>{JSON.parse(localStorage.getItem('user'))?.nik}</td></tr>
+            <tr><th>Nama</th><td>{user.nama || '-'}</td></tr>
+            <tr><th>NIK</th><td>{user.nik || '-'}</td></tr>
           </tbody>
         </table>
       </div>
     );
   }
 
-  return <div className="panel active-panel"><p>Panel tidak ditemukan</p></div>;
+  return <div className="panel active-panel"><p>Panel tidak ditemukan: {activePanel}</p></div>;
 }

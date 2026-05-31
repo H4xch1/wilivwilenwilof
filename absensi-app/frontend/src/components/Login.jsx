@@ -16,7 +16,8 @@ export default function Login({ setUser }) {
     setLoading(true);
     setError('');
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { nik, password });
+      // GANTI KODE YANG LAMA MENJADI SEPERTI INI:
+      const res = await axios.post(`http://localhost:5000/api/auth/login`, { nik, password });
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setUser(res.data.user);

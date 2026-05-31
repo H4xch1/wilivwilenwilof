@@ -1,20 +1,25 @@
 import { useState } from 'react';
-import Sidebar from './Sidebar.jsx';
-import AdminPanel from './AdminPanel.jsx';
-import WalasPanel from './WalasPanel.jsx';
-import PetugasPanel from './PetugasPanel.jsx';
-import MuridPanel from './MuridPanel.jsx';
+import Sidebar from './Sidebar';
+import AdminPanel from './AdminPanel';
+import WalasPanel from './WalasPanel';
+import PetugasPanel from './PetugasPanel';
+import MuridPanel from './MuridPanel';
 
 export default function Dashboard({ user, setUser }) {
   const [activePanel, setActivePanel] = useState('dashboard');
 
   const renderPanel = () => {
     switch (user.role) {
-      case 'admin': return <AdminPanel activePanel={activePanel} />;
-      case 'walas': return <WalasPanel activePanel={activePanel} />;
-      case 'petugas': return <PetugasPanel activePanel={activePanel} />;
-      case 'murid': return <MuridPanel activePanel={activePanel} />;
-      default: return <div>Role tidak dikenal</div>;
+      case 'admin':
+        return <AdminPanel activePanel={activePanel} />;
+      case 'walas':
+        return <WalasPanel activePanel={activePanel} />;
+      case 'petugas':
+        return <PetugasPanel activePanel={activePanel} />;
+      case 'murid':
+        return <MuridPanel activePanel={activePanel} />;
+      default:
+        return <div>Role tidak dikenal</div>;
     }
   };
 
@@ -33,16 +38,7 @@ export default function Dashboard({ user, setUser }) {
     'manage-walas': 'Manage Wali Kelas',
     'register-admin': 'Register Admin',
     'manage-admin': 'Manage Admin',
-    'siswa-bimbingan': 'Siswa Bimbingan',
-    'absensi-walas': 'Rekap Absensi',
-    'kirim-laporan': 'Kirim Laporan Kasus',
-    'riwayat-laporan': 'Riwayat Laporan',
-    'profil-walas': 'Profil Saya',
-    absensi: 'Absensi Hari Ini',
-    'laporan-petugas': 'Laporan Kasus dari Walas',
-    'absen-form': 'Form Absensi',
-    'riwayat-absen': 'Riwayat Absensi',
-    profil: 'Profil Saya',
+    // untuk role lain (walas, petugas, murid) silakan tambahkan sendiri
   };
 
   return (
@@ -50,7 +46,7 @@ export default function Dashboard({ user, setUser }) {
       <Sidebar user={user} activePanel={activePanel} setActivePanel={setActivePanel} />
       <div className="main-content">
         <div className="top-bar">
-          <div className="page-title" id="page-title">{panelTitles[activePanel] || 'Dashboard'}</div>
+          <div className="page-title">{panelTitles[activePanel] || 'Dashboard'}</div>
           <div className="user-info">
             <span><i className="fas fa-user-astronaut"></i> {user.nama}</span>
             <button className="logout-btn" onClick={() => {

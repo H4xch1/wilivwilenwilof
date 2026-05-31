@@ -348,3 +348,16 @@
   .top-bar { margin: 12px; }
   .stats-grid { grid-template-columns: 1fr; }
 }
+.panel {
+  display: none;
+}
+.panel.active-panel {
+  display: block;
+}
+.alert-info {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 12px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
